@@ -1,49 +1,12 @@
-FROM ubuntu:22.04
+FROM ghcr.io/lecode-official/comfyui-docker:latest
 
-# --- Environment Variables ---
-ENV DEBIAN_FRONTEND=noninteractive \
-    LANG=C.UTF-8 \
-    USER_NAME=coder \
-    USER_HOME=/home/coder \
-    CODE_SERVER_PORT=8080 \
-    EXT_SCRIPT_DIR=/usr/local/bin
+WORKDIR /opt/comfyui
 
-# --- Install Base Dependencies ---
-RUN apt-get update && \
-    apt-get install -y \
-        curl gnupg ca-certificates jq build-essential \
-        libssl-dev libffi-dev git wget unzip sudo && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+ADD entrypoint.sh /entrypoint.sh
 
-# --- Install code-server ---
-RUN curl -fsSL https://code-server.dev/install.sh | sh
+ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]
 
-# --- Create User ---
-RUN useradd -m -s /bin/bash ${USER_NAME} && \
-    echo "${USER_NAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    mkdir -p ${USER_HOME}/.local/share/code-server/User && \
-    mkdir -p ${USER_HOME}/.config && \
-    mkdir -p ${USER_HOME}/.cache && \
-    chown -R ${USER_NAME}:${USER_NAME} ${USER_HOME}/.local ${USER_HOME}/.config ${USER_HOME}/.cache
-
-# --- Copy Scripts ---
-COPY scripts/entry.sh ${EXT_SCRIPT_DIR}/entry.sh
-
-# --- Permissions ---
-RUN chmod +x ${EXT_SCRIPT_DIR}/*.sh
-
-# --- Switch to Non-Root User ---
-USER ${USER_NAME}
-WORKDIR ${USER_HOME}
-
-RUN mkdir -p ${USER_HOME}/projects && chown ${USER_NAME}:${USER_NAME} ${USER_HOME}/projects
-# --- Download Extensions ---
-RUN code-server --install-extension ms-python.python
-# code-server --install-extension other.extension
-
-# --- Expose Port ---
-EXPOSE ${CODE_SERVER_PORT}
-
-# --- Entrypoint and Default CMD ---
-ENTRYPOINT ["bash", "/usr/local/bin/entry.sh"]
-CMD ["--bind-addr", "0.0.0.0:8080", "--auth", "password"]
+# On startup, ComfyUI is started at its default port; the IP address is changed from localhost to 0.0.0.0, because Docker is only forwarding traffic
+# to the IP address it assigns to the container, which is unknown at build time; listening to 0.0.0.0 means that ComfyUI listens to all incoming
+# traffic; the auto-launch feature is disabled, because we do not want (nor is it possible) to open a browser window in a Docker container
+CMD ["/opt/conda/bin/python", "main.py", "--listen", "0.0.0.0", "--port", "8188", "--disable-auto-launch"]

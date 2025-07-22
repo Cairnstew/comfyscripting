@@ -1,18 +1,23 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  vscode:
-    build: .
+  comfyscripting:
+    image: seanstrcairns/comfyscripting
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: comfyscripting
+    restart: unless-stopped
     env_file:
       - .env
-    container_name: ${COMPOSE_PROJECT_NAME}_vscode-server
     ports:
-      - "${PORT}:8080"
-    volumes:
-          - app_data:/home/coder/.local/share/code-server
-          - ./projects:/home/coder/projects
-    restart: unless-stopped
-
-volumes:
-  app_data:
-    name: ${COMPOSE_PROJECT_NAME}_data
+      - "8188:8188"  # ComfyUI
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: cdi
+            capabilities:
+              - gpu
+            device_ids:
+              - nvidia.com/gpu=all
